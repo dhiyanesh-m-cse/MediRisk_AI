@@ -1,0 +1,20 @@
+/** Design reminder — Crimson Pulse: personal profile and privacy controls should be clear, sober, and reversible. */
+import { useEffect, useState } from "react";
+import { Database, FlaskConical, LogOut, ShieldCheck, UserRound } from "lucide-react";
+import { toast } from "sonner";
+import BottomNav from "@/components/BottomNav";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+
+export default function Settings({ onTabChange }: { onTabChange: (tab: string) => void }) {
+  const { user, logout } = useAuth();
+  const utils = trpc.useUtils();
+  const profile = trpc.profile.mine.useQuery();
+  const [displayName, setDisplayName] = useState("");
+  useEffect(() => setDisplayName(profile.data?.displayName || user?.name || ""), [profile.data?.displayName, user?.name]);
+  const save = trpc.profile.save.useMutation({
+    onSuccess: () => { utils.profile.mine.invalidate(); toast.success("Display name updated."); },
+    onError: (error) => toast.error(error.message),
+  });
+  return <div className="min-h-screen bg-[#0A0A0A] pb-24"><header className="px-5 pt-8 pb-5"><p className="text-[10px] tracking-[.15em] text-red-300/60">ACCOUNT & PRIVACY</p><h1 className="mt-1 font-display text-2xl font-bold text-white">Profile Settings</h1><p className="mt-1 text-sm text-white/40">Manage your MediRisk identity and workspace.</p></header><main className="px-5 space-y-4"><section className="rounded-2xl border border-white/7 bg-white/[.025] p-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-red-500/10 text-red-300 flex items-center justify-center"><UserRound size={18} /></div><div><p className="text-sm font-semibold text-white/80">Signed in account</p><p className="text-[11px] text-white/35">{user?.email || user?.name || "Authenticated user"}</p></div></div><label className="mt-5 block text-xs text-white/55">Dashboard display name<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={100} className="mt-2 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-sm text-white outline-none focus:border-red-500/50" /></label><button disabled={displayName.trim().length < 2 || save.isPending} onClick={() => save.mutate({ displayName: displayName.trim() })} className="mt-3 w-full rounded-xl bg-white/8 py-3 text-sm font-medium text-white/75 disabled:opacity-50">{save.isPending ? "Saving…" : "Save display name"}</button></section><section className="rounded-2xl border border-cyan-400/15 bg-cyan-400/[.035] p-4"><div className="flex gap-3"><Database size={17} className="mt-0.5 text-cyan-300" /><div><p className="text-sm font-semibold text-cyan-100">Private health workspace</p><p className="mt-1 text-[11px] leading-relaxed text-cyan-100/55">Your saved assessments and uploaded file references are organized under your signed-in account. Only upload data you are authorized to store.</p></div></div></section><button onClick={() => onTabChange("lab")} className="w-full rounded-2xl border border-white/7 bg-white/[.025] p-4 text-left flex items-center gap-3"><div className="h-10 w-10 rounded-xl bg-cyan-400/10 text-cyan-300 flex items-center justify-center"><FlaskConical size={18} /></div><div><p className="text-sm font-semibold text-white/75">Model laboratory</p><p className="mt-0.5 text-[11px] text-white/35">Review the academic model card and dataset path.</p></div></button><section className="rounded-2xl border border-amber-400/15 bg-amber-400/[.035] p-4"><div className="flex gap-3"><ShieldCheck size={17} className="mt-0.5 text-amber-300" /><p className="text-[11px] leading-relaxed text-amber-100/55">MediRisk is an academic prototype. It is not a medical diagnosis, emergency service, or clinically certified health-record system.</p></div></section><button onClick={async () => { await logout(); toast.success("You have signed out."); }} className="w-full rounded-xl border border-red-500/20 bg-red-500/[.07] py-3 flex items-center justify-center gap-2 text-sm font-medium text-red-300"><LogOut size={16} />Sign out</button></main><BottomNav activeTab="settings" onTabChange={onTabChange} /></div>;
+}
